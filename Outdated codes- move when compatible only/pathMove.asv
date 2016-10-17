@@ -1,0 +1,94 @@
+clear;clc; close all;
+% find p1,p2,p3,p4
+p1=[466.06, -4.43, 214.42]';
+p2=[466.06, 49.76, 214.42]';
+p3=[416.838, 49.76, 214.42]';
+p4=[416.838, -4.43, 214.42]';
+%%
+% find z_mean
+centroid=mean([p1,p2,p3,p4]')';
+zmean=centroid(3);
+
+%find zmax,zmin
+zmax=zmean+20;%assuming units are in mm
+zmin=zmean-5;
+
+
+[l,indx1]=min([norm(p2(1:2)-p1(1:2)),norm(p3(1:2)-p4(1:2))]);
+[b,indx2]=min([norm(p4(1:2)-p1(1:2)),norm(p3(1:2)-p2(1:2))]);
+
+ldir=p2(1:2)-p1(1:2);
+
+ldir=ldir/norm(ldir);
+
+bdir=p4(1:2)-p1(1:2);
+
+bdir=bdir/norm(bdir);
+
+result=[];
+
+
+moveFoxbotCartesianAbs(p1);
+% add plot function
+num_intervals=10;
+
+x=0:l/num_intervals:l;
+y=0:b/num_intervals:b;
+[X,Y]=meshgrid(x,y);
+Z=0*X;
+figure
+axis equal;
+h1=surf(X,Y,Z);
+shading interp
+colormap hot;
+colorbar
+%%
+tt=0;
+
+xsFit = meshgrid2vec(X, Y, zmean*ones(num_intervals+1)); %3D estimated grid
+Gprior=zeros(size(xsFit(:,1)));
+ysmask=ones(size(xsFit(:,1)));
+h3= color_line3( xsFit(:,1),xsFit(:,2), xsFit(:,3),ymu,'.');
+x=[];
+cEst=[];
+for jj=1:100
+    
+    if jj<=4
+                xNext=p1(1:2)+randi()*l/(num_intervals+1)*ldir+rand()*b/(num_intervals+1)*bdir;%first palpate some random points
+    elseif jj<=10 
+        xNext=p1(1:2)+randi()*l/(num_intervals+1)*ldir+rand()*b/(num_intervals+1)*bdir;%first palpate some random points
+    
+        
+    else
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
+        
+        [GPRsave,ysmask,ymu,xNext,idxPick]=GPR_prior(x,cEst,xsFit,Gprior,GPRsave,jj,ysmask);
+        
+   
+        
+    end
+    
+        p=[xNext(1),xNext(2),0];
+        moveFoxbotCartesianAbs([p(1) p(2) zmax]);
+        
+        moveFoxbotCartesianAbs([p(1) p(2) zmin]);
+        force=getforce;
+        %sense stiffness=force/(zmin-zmean)
+        stiffness=abs(force)/(zmean-zmin);
+        x=[x,p];
+        
+        cEst=[cEst,stiffness];
+    %Update plot with new stiffness
+    
+    set(h3,'XData', [xsFit(:,1) xsFit(:,1)],'YData', [xsFit(:,2) xsFit(:,2)],...
+                'ZData',[xsFit(:,3) xsFit(:,3)] ,'CData', [ymu ymu]);
+            
+    axis equal;
+    moveFoxbotCartesianAbs([p(1) p(2) zmax]);
+    %Loop ends
+end
+
+save expt_results_3.mat result p1 p2 p3 p4 zmin zmax
+%%
+% after you finish reading, send a <cr> to
