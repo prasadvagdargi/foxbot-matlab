@@ -18,7 +18,6 @@ while(1)
     foxbotObj.moveCartesianAbs([320 0 300]);
     
     msg=receive(isMovingSub);
-    
     while msg.Data
         [~,mag]=getOptoForce(optoSub,bias);
         

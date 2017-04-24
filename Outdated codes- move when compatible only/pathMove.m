@@ -5,13 +5,16 @@ p2=[466.06, 49.76, 214.42]';
 p3=[416.838, 49.76, 214.42]';
 p4=[416.838, -4.43, 214.42]';
 %%
+sub=rossubscriber('/ft_sensor/netft_data');
+
+%%
 % find z_mean
 centroid=mean([p1,p2,p3,p4]')';
 zmean=centroid(3);
 
 %find zmax,zmin
 zmax=zmean+20;%assuming units are in mm
-zmin=zmean-5;
+zmin=zmean-2;
 
 
 [l,indx1]=min([norm(p2(1:2)-p1(1:2)),norm(p3(1:2)-p4(1:2))]);
@@ -54,6 +57,7 @@ for j=1:num_intervals+1
         moveFoxbotCartesianAbs([p(1) p(2) zmax]);
         
          moveFoxbotCartesianAbs([p(1) p(2) zmin]);
+         
         force=getforce;
         %sense stiffness=force/(zmin-zmean)
     stiffness=abs(force)/(zmean-zmin);
@@ -71,5 +75,3 @@ for j=1:num_intervals+1
     end
 end
 save expt_results_3.mat result p1 p2 p3 p4 zmin zmax
-%%
-% after you finish reading, send a <cr> to

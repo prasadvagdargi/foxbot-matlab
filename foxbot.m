@@ -2,8 +2,8 @@
 % Measurements in mm and degrees for cartesian and joint space
 % respectively.
 classdef foxbot
-    
-    properties(SetAccess = private, GetAccess = private)
+    %SetAccess = private, GetAccess = private
+    properties(SetAccess = public)
         jogCClient
         jogCRequest
         
@@ -21,16 +21,20 @@ classdef foxbot
         stopClient
         stopRequest
         
-        pauseTime=0.01;
+        setCClient
+        setCRequest
+        
+        pauseTime=0.05;
     end
     
     methods
         
         function obj=foxbot()
             % Create all the servers and request messages
-            obj.jogCClient = rossvcclient('/foxbot/robot_JogCartesian');
-            obj.jogCRequest = rosmessage(obj.jogCClient);
-            
+
+%             obj.jogCClient = rossvcclient('/foxbot/robot_JogCartesian');
+%             obj.jogCRequest = rosmessage(obj.jogCClient);
+%             
             obj.absJClient = rossvcclient('/foxbot/robot_SetJoints');
             obj.absJRequest = rosmessage(obj.absJClient);
             
@@ -42,6 +46,9 @@ classdef foxbot
             
             obj.stopClient=rossvcclient('/foxbot/robot_Stop');
             obj.stopRequest=rosmessage(obj.stopClient);
+            
+            obj.setCClient = rossvcclient('/foxbot/robot_SetCartesian');
+            obj.setCRequest = rosmessage(obj.setCClient);
         end
         
         function obj=setPauseTime(obj,t)
@@ -57,6 +64,7 @@ classdef foxbot
            resp=call(obj.jogJClient,obj.jogJRequest); 
         end
         
+        % Check this up
         function [resp]=moveCartesianDiff(obj,diff)
             % Move the foxbot in cartesian differential.
             obj.jogCRequest.X = diff(1);
@@ -95,7 +103,7 @@ classdef foxbot
         function [resp]=goHome(obj)
             % USE WITH CAUTION.
             % Moves the foxbot to home position
-            goal=[0 0 90 0 90 0];
+            goal=[0 0 90 0 90 180];
             obj.absJRequest.J1= goal(1);
             obj.absJRequest.J2= goal(2);
             obj.absJRequest.J3= goal(3);
@@ -106,7 +114,6 @@ classdef foxbot
             resp=call(obj.absJClient, obj.absJRequest);
             pause(obj.pauseTime);
         end
-        
         
         function [resp]=moveJointsAbs(obj,goal)
             % USE WITH CAUTION.
@@ -149,6 +156,49 @@ classdef foxbot
         function [resp]=stopRobot(obj)
            resp=call(obj.stopClient,obj.stopRequest);
            pause(obj.pauseTime);
+        end
+        
+        function [resp]=moveCartesianFull(obj,goal)
+            % USE WITH CAUTION.
+            
+            % Move the foxbot in cartesian absolute. Cartesian can move
+            % only in jog mode, therefore the current position is
+            % subtracted to find the difference to jog and then the robot
+            % is moved.
+            
+            obj.setCRequest.X = goal(1);
+            obj.setCRequest.Y = goal(2);
+            obj.setCRequest.Z = goal(3);
+            
+            obj.setCRequest.Q0 = 0;
+            obj.setCRequest.Qx = 1;
+            obj.setCRequest.Qy = 0;
+            obj.setCRequest.Qz = 0;
+            
+            resp=call(obj.setCClient, obj.setCRequest);
+            pause(obj.pauseTime);
+        end
+        
+        function [resp]=moveCartesianFullOrientation(obj,goal,quat)
+            % USE WITH CAUTION.
+            
+            % Move the foxbot in cartesian absolute. Cartesian can move
+            % only in jog mode, therefore the current position is
+            % subtracted to find the difference to jog and then the robot
+            % is moved. Quaternion of endfactor is specified with:
+            % quat = [w x y z]
+            
+            obj.setCRequest.X = goal(1);
+            obj.setCRequest.Y = goal(2);
+            obj.setCRequest.Z = goal(3);
+            
+            obj.setCRequest.Q0 = quat(1);
+            obj.setCRequest.Qx = quat(2);
+            obj.setCRequest.Qy = quat(3);
+            obj.setCRequest.Qz = quat(4);
+            
+            resp=call(obj.setCClient, obj.setCRequest);
+            pause(obj.pauseTime);
         end
     end
 end

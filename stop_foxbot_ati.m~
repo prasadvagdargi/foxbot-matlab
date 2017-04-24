@@ -1,0 +1,32 @@
+% Stops the foxbot when force exceeds a limit and then restarts its
+% original path
+clear;clc;
+
+sub=rossubscriber('/ft_sensor/netft_data');
+pause(0.1);
+
+foxbotObj=foxbot();
+%[533.67 -29.77 130.92];
+top=[533.67 -29.77 130.92+50];
+goal=[533.67 -29.77 130.92+30];
+%%
+% Go over the point to probe
+foxbotObj.moveCartesianFull(top);
+pause(0.1);
+
+% Receive the sensor readings
+forceMsg=receive(sub);
+posMsg=foxbotObj.getCartesian();
+distance=posMsg.Z-goal(3);
+%%
+% If both force and position are not reached
+while(forceMsg.Wrench.Force.Z<5 && distance>0)
+    % Move towards it
+    foxbotObj.moveCartesianDiff([0 0 -0.1]);
+    
+    % Receive sensor values and then recheck.
+    forceMsg=receive(sub);
+    posMsg=foxbotObj.getCartesian();
+    distance=posMsg.Z-goal(3);
+end
+result={forceMsg.Wrench.Force.Z;posMsg};
